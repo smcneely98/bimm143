@@ -1,0 +1,199 @@
+---
+title: "class09"
+author: "Seth McNeely"
+date: "2/4/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## K-means clustering
+
+The main k-means function is called `kmeans()`. Let's play with it here. First, we need to generate some data.
+
+```{r}
+# Generate some example data for clustering
+tmp <- c(rnorm(30,-3), rnorm(30,3))
+x <- cbind(x=tmp, y=rev(tmp))
+
+plot(x)
+```
+
+Now let's see how `kmeans()` actually works.
+
+```{r}
+# Find clusters with two centers and twenty iterations
+kx <- kmeans(x, centers=2, nstart=20)
+kx
+```
+
+Inspecting the results:
+
+Q1. How many points are in each cluster?
+`K-means clustering with 2 clusters of sizes 30, 30`
+
+Q2. What component of your result of your object details
+- cluster size? 
+`Within cluster sum of squares by cluster:`
+`[1] 76.4491 76.4491`
+
+- cluster assignment/membership 
+`Clustering vector:`
+ `[1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1`
+ `[19] 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2`
+ `[37] 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2`
+ `[55] 2 2 2 2 2 2`
+
+- cluster center? 
+`Cluster means:`
+`          x         y`
+`1 -2.741871  2.768659`
+`2  2.768659 -2.741871`
+
+We can use the `kx$cluster` tag to call our cluster data
+```{r}
+kx$cluster
+
+length(kx$cluster)
+table(kx$cluster)
+```
+
+Now let's replot using our cluster data
+```{r}
+# Plot x colored by the kmeans cluster assignment and add cluster centers as blue points
+plot(x, col=kx$cluster)
+points(kx$centers, col="blue", pch=16)
+```
+
+
+## Hierarchical clustering
+
+The main hierarchical clustering fucntion in R is `hclust`. An important point here is that you have to calculate the distance matrix from your input data before calling.
+
+For this, we can use the `dist()`
+```{r}
+hc <- hclust(dist(x))
+plot(hc)
+```
+
+We can add more features to our tree by cutting our tree into its membership groups:
+```{r}
+plot(hc)
+abline(h=10, col="red", lty=2)
+cutree(hc, h=10) # Cut by height h
+
+# h= argument can be changed to k= if you want to cut by a specific number of groups
+```
+
+## Let's try with some more serious data.
+```{r}
+# Step 1. Generate some example data for clustering
+x <- rbind(
+ matrix(rnorm(100, mean=0, sd = 0.3), ncol = 2), # c1
+ matrix(rnorm(100, mean = 1, sd = 0.3), ncol = 2), # c2
+ matrix(c(rnorm(50, mean = 1, sd = 0.3), # c3
+ rnorm(50, mean = 0, sd = 0.3)), ncol = 2))
+
+colnames(x) <- c("x", "y")
+
+# Step 2. Plot the data without clustering
+plot(x)
+
+# Step 3. Generate colors for known clusters
+# (just so we can compare to hclust results)
+col <- as.factor( rep(c("c1","c2","c3"), each=50) )
+
+plot(x, col=col)
+```
+
+Inspecting the results:
+
+Q1. Use the `dist()`, `hclust()`, `plot()`, and `cutree()` functions to return 2 and 3 clusters
+```{r}
+hc <-  hclust(dist(x))
+plot(hc)
+abline(h=1.7, col="red", lty=2)
+```
+
+To get cluster memberships vector, use `cutree()` and then `table()` to find how many members in each cluster. We can also plot our data with our new groupings. 
+```{r}
+grps <- cutree(hc, k=3)
+table(grps)
+
+plot(x, col=grps)
+```
+
+Q2. How does this compare to your known 'col' groups?
+Notice how no colors are intersecting with another grouping unlike before.
+
+
+## Principal component analysis
+
+### PCA of UK food data
+Suppose that we are examining the following data, from the UK’s ‘Department for Environment, Food and Rural Affairs’ (DEFRA), showing the consumption in grams (per person, per week) of 17 different types of food-stuff measured and averaged in the four countries of the United Kingdom in 1997.
+
+Now let's start by reading the data file.
+```{r}
+fd <- read.csv("UK_foods.csv")
+```
+
+We can use the `dim()` to find out how many rows and columns we have. Or, we can find them separately using `nrow()` and `ncol()` for rows and columns, respectively.
+```{r}
+dim(fd)
+nrow(fd)
+ncol(fd)
+```
+
+### Checking data
+
+It is always a good idea to examine your imported data to make sure it meets your expectations. At this stage we want to make sure that no odd things have happened during the importing phase that will come back to haunt us later.
+
+For this task we can use the `View()` function to display all the data, or the `head()` and `tail()`` functions to print only a portion of the data (by default 6 rows from either the top or bottom of the dataset respectively).
+```{r}
+head(fd)
+```
+
+It looks like the row-names here were not set properly as we were expecting 4 columns. 
+
+Here it appears that the row-names are incorrectly set as the first column of our `x` data frame. This is very common error. Lets try to fix this up with the following code, which sets the `rownames()` to the first column and then removes the troublesome first column (with the -1 column index):
+```{r}
+# Note how the minus indexing works
+rownames(fd) <- fd[,1]
+fd <- fd[,-1]
+head(fd)
+```
+
+An alternative approach to setting the correct row-names in this case would be to read the data filie again and this time set the row.names argument of `read.csv()` to be the first column (i.e. use argument setting `row.names=1`), see below:
+```{r}
+x <- read.csv("UK_foods.csv", row.names=1)
+head(x)
+```
+
+### Spotting major differences and trends
+
+```{r}
+barplot(as.matrix(x), beside=T, col=rainbow(nrow(x)))
+
+barplot(as.matrix(x), beside=F, col=rainbow(nrow(x)))
+
+pairs(fd, col=rainbow(10), pch=16)
+```
+
+Even relatively small datasets can prove chalanging to interpret.
+
+### Using PCA
+
+Principal component analysis with the `prcomp()` function.
+```{r}
+pca <- prcomp(t(fd)) #t() transposes the data frame
+summary(pca)
+```
+
+```{r}
+# Plot PC1 vs PC2
+plot(pca$fd[,1], pca$fd[,2], xlab="PC1", ylab="PC2", xlim=c(-270,500))
+text(pca$fd[,1], pca$fd[,2], colnames(fd))
+```
+
