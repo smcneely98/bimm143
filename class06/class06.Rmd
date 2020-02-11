@@ -3,8 +3,7 @@ title: 'Class 06: R Functions'
 author: "Seth McNeely"
 date: "1/23/2020"
 output:
-  html_document: default
-  word_document: default
+  github_document: default
 ---
 
 ```{r setup, include=FALSE}
